@@ -1,4 +1,4 @@
-LUXELOCKS WEBSITE: SETUP GUIDE
+Emergeo Belle WEBSITE: SETUP GUIDE
 ==============================
 
 What's in this folder
