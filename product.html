@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Wishlist | LuxeLocks</title>
+<title>Wig | LuxeLocks</title>
 <meta name="theme-color" content="#08292e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -483,12 +483,9 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
  .toolbar .select{width:100%}
 }
 
-.wl-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:26px}
-.wl-note{background:var(--soft);border-radius:12px;padding:14px 18px;display:flex;gap:12px;align-items:center;margin-bottom:24px;font-size:15px;color:var(--text)}
-.wl-note .ic{color:var(--teal-700)}
 </style>
 </head>
-<body data-page="wishlist">
+<body data-page="product" data-nav="shop.html">
 <div class="topbar"><div class="container">
   <div class="ann"><span data-icon="truck"></span><span id="annText"></span></div>
   <nav class="top-links" id="topLinks" aria-label="Quick links"></nav>
@@ -511,13 +508,41 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
 <div class="loader"><span></span></div>
 
 <main>
+  <div class="crumbs"><div class="container" id="crumbs"></div></div>
   <div class="container">
-    <div class="page-head wl-head">
-      <div><h1 class="page-title" data-s="wishlist_title"></h1><p class="page-sub" id="wlCount"></p></div>
-      <button class="btn btn-outline" id="addAll">ADD ALL TO CART <span data-icon="bag"></span></button>
+    <div class="pdp" id="pdp">
+      <div class="gallery">
+        <div class="zoom" id="zoom"><img id="mainImg" alt="" draggable="false"></div>
+        <div class="thumbs" id="thumbs"></div>
+        <p class="zoom-hint">Roll to zoom &bull; Drag to move</p>
+      </div>
+      <div class="info">
+        <div class="pdp-top"><h1 class="pdp-title" id="pName"></h1><button class="wish-btn static" id="pWish" aria-label="Save to wishlist"></button></div>
+        <div class="rating" id="pStars"></div>
+        <div class="pdp-price" id="pPrice"></div>
+        <p class="pdp-desc" id="pDesc"></p>
+
+        <div id="lenWrap"><p class="opt-label">Length</p><div class="opts" id="lengths"></div></div>
+        <div id="colWrap"><p class="opt-label">Color <span id="colName"></span></p><div class="swatches" id="colors"></div></div>
+        <div id="capWrap"><p class="opt-label">Cap Size</p><select class="select block" id="cap" aria-label="Cap size"></select></div>
+
+        <p class="opt-label">Quantity</p>
+        <div class="qty" id="qty"><button type="button" data-q="-1" aria-label="Fewer" data-icon="minus"></button><input id="qtyIn" value="1" inputmode="numeric" aria-label="Quantity"><button type="button" data-q="1" aria-label="More" data-icon="plus"></button></div>
+        <p class="stock" id="stockNote"></p>
+
+        <div class="pdp-actions">
+          <button class="btn btn-dark btn-lg" id="addBtn">ADD TO CART <span data-icon="bag"></span></button>
+          <button class="btn btn-outline btn-lg" id="buyBtn">BUY NOW</button>
+        </div>
+        <div class="mini-trust" id="miniTrust"></div>
+        <div class="acc" id="acc"></div>
+      </div>
     </div>
-    <div class="wl-note" id="wlNote" hidden><span data-icon="heart"></span><span><a class="link" href="signup.html?next=wishlist.html">Sign in or create an account</a> to keep your wishlist on every device.</span></div>
-    <div class="grid grid-auto" id="wl" style="padding-bottom:64px"></div>
+
+    <section class="section pt0" id="relatedSec">
+      <div class="section-head"><h2>You may also like</h2><span class="orn"></span></div>
+      <div class="grid grid-4" id="related"></div>
+    </section>
   </div>
 </main>
 <footer class="site-footer" id="contact">
@@ -885,23 +910,117 @@ const LL = (() => {
 })();
 
 
-LL.start(({ products }) => {
-  const { $, wish, card, icon, user, addToCart, toast } = LL;
-  function draw() {
-    const list = wish().map(id => products.find(p => p.id === id)).filter(Boolean);
-    const n = list.length;
-    $('#wlCount').textContent = n ? `${n} saved ${n === 1 ? 'wig' : 'wigs'}` : '';
-    $('#addAll').hidden = !n;
-    $('#wl').innerHTML = n ? list.map(p => card(p)).join('')
-      : `<div class="empty span-all">${icon('heart')}<h3>Your wishlist is empty</h3><p>Tap the heart on any wig to save it here for later.</p><a class="btn btn-dark" href="shop.html">Browse wigs</a></div>`;
+LL.start(({ products, reviews, settings: S }) => {
+  const { $, $$, esc, enc, icon, stars, money, priceFor, defaults, lenLabel, addToCart, inWish, hl, slot, card, api, toast, ph, params } = LL;
+  const p = products.find(x => x.id === params.get('id')) || products[0];
+  if (!p) { $('#pdp').innerHTML = `<div class="empty span-all">${icon('search')}<h3>Wig not found</h3><p>It may have been removed.</p><a class="btn btn-dark" href="shop.html">Back to shop</a></div>`; return; }
+
+  document.title = `${p.name} | ${S.store_name}`;
+  const cat = p.categories[0];
+  $('#crumbs').innerHTML = `<a href="index.html">Home</a><span>&gt;</span><a href="shop.html">Shop Wigs</a>`
+    + (cat ? `<span>&gt;</span><a href="shop.html?cat=${enc(cat)}">${esc(cat)} Wigs</a>` : '')
+    + `<span>&gt;</span><span class="cur">${esc(p.name)}</span>`;
+
+  /* ---- Gallery with roll-to-zoom and drag ---- */
+  const imgs = p.images.length ? p.images : ['Front view', 'Back view', 'Side view', 'Close up', 'Hairline'].map(t => ph(t));
+  const main = $('#mainImg'), z = $('#zoom');
+  main.alt = p.name;
+  main.addEventListener('error', () => { if (!main.src.startsWith('data:')) main.src = ph(); });
+  let s = 1, x = 0, y = 0, drag = null;
+  const apply = () => { main.style.transform = `translate(${x}px,${y}px) scale(${s})`; z.classList.toggle('zoomed', s > 1); };
+  const clamp = () => { const mx = z.clientWidth * (s - 1) / 2, my = z.clientHeight * (s - 1) / 2; x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y)); };
+  const reset = () => { s = 1; x = 0; y = 0; apply(); };
+  z.addEventListener('wheel', e => {
+    e.preventDefault();
+    s = Math.min(3, Math.max(1, s * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+    if (s < 1.02) { s = 1; x = 0; y = 0; }
+    clamp(); apply();
+  }, { passive: false });
+  z.addEventListener('pointerdown', e => { if (s <= 1) return; drag = { sx: e.clientX - x, sy: e.clientY - y }; z.setPointerCapture(e.pointerId); z.classList.add('drag'); });
+  z.addEventListener('pointermove', e => { if (!drag) return; x = e.clientX - drag.sx; y = e.clientY - drag.sy; clamp(); apply(); });
+  const end = () => { drag = null; z.classList.remove('drag'); };
+  z.addEventListener('pointerup', end); z.addEventListener('pointercancel', end);
+  z.addEventListener('dblclick', () => { s = s > 1 ? 1 : 2.2; x = 0; y = 0; apply(); });
+
+  function setImg(i) { main.src = imgs[i]; reset(); $$('#thumbs button').forEach((b, j) => b.classList.toggle('on', j === i)); }
+  $('#thumbs').innerHTML = imgs.length > 1 ? imgs.map((src, i) =>
+    `<button type="button" data-i="${i}" aria-label="Image ${i + 1}"><img src="${esc(src)}" alt="" onerror="this.onerror=null;this.src=LL.ph()"></button>`).join('') : '';
+  $('#thumbs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setImg(+b.dataset.i); });
+  setImg(0);
+
+  /* ---- Info & options ---- */
+  $('#pName').textContent = p.name;
+  const w = $('#pWish'); w.dataset.wish = p.id; w.innerHTML = icon('heart'); w.classList.toggle('on', inWish(p.id));
+  $('#pStars').innerHTML = stars(p.rating, p.reviews ? `(${p.reviews} reviews)` : '');
+  $('#pDesc').textContent = p.description || '';
+
+  const st = defaults(p);
+  let qty = 1;
+  function drawOpts() {
+    $('#lenWrap').hidden = !p.lengths.length;
+    $('#lengths').innerHTML = p.lengths.map(l => `<button type="button" class="opt ${l === st.length ? 'on' : ''}" data-len="${esc(l)}">${esc(lenLabel(l))}</button>`).join('');
+    $('#colWrap').hidden = !p.colors.length;
+    $('#colors').innerHTML = p.colors.map(c => `<button type="button" class="sw ${c.name === st.color ? 'on' : ''}" style="background:${esc(c.hex)}" title="${esc(c.name)}" aria-label="${esc(c.name)}" data-col="${esc(c.name)}"></button>`).join('');
+    $('#colName').textContent = st.color ? '· ' + st.color : '';
+    $('#capWrap').hidden = !p.cap_sizes.length;
+    $('#cap').innerHTML = p.cap_sizes.map(c => `<option ${c === st.cap ? 'selected' : ''}>${esc(c)}</option>`).join('');
+    $('#pPrice').innerHTML = LL.priceHTML(p, st.length);
   }
-  $('#wlNote').hidden = !!user();
-  $('#addAll').onclick = () => {
-    wish().forEach(id => { const p = products.find(x => x.id === id); if (p && p.stock !== 0) addToCart(id, {}, 1, true); });
-    toast('Your saved wigs are in the cart.<a href="cart.html">View cart</a>');
-  };
-  document.addEventListener('wishchange', draw);
-  draw();
+  $('#lengths').addEventListener('click', e => { const b = e.target.closest('[data-len]'); if (b) { st.length = b.dataset.len; drawOpts(); } });
+  $('#colors').addEventListener('click', e => { const b = e.target.closest('[data-col]'); if (b) { st.color = b.dataset.col; drawOpts(); } });
+  $('#cap').addEventListener('change', e => { st.cap = e.target.value; });
+  drawOpts();
+
+  const qIn = $('#qtyIn');
+  const setQty = v => { qty = Math.max(1, Math.min(99, parseInt(v, 10) || 1)); qIn.value = qty; };
+  $('#qty').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (b) setQty(qty + +b.dataset.q); });
+  qIn.addEventListener('change', () => setQty(qIn.value));
+
+  const soldOut = p.stock === 0;
+  $('#stockNote').textContent = soldOut ? 'Sold out for now.' : (p.stock != null && p.stock <= 5 ? `Only ${p.stock} left in stock.` : '');
+  $('#addBtn').disabled = $('#buyBtn').disabled = soldOut;
+  const opts = () => ({ color: st.color, length: st.length, cap: st.cap });
+  $('#addBtn').onclick = () => addToCart(p.id, opts(), qty);
+  $('#buyBtn').onclick = () => { addToCart(p.id, opts(), qty, true); location.href = 'payment.html'; };
+
+  $('#miniTrust').innerHTML = hl('product_trust').map(h => `<div>${slot(h)}${esc(h.title)}<small>${esc(h.text)}</small></div>`).join('');
+
+  /* ---- Accordions ---- */
+  const para = t => String(t || '').split(/\\n|\r?\n/).map(v => v.trim()).filter(Boolean).map(v => `<p>${esc(v)}</p>`).join('');
+  const sec = (ic, title, body, open) => `<details ${open ? 'open' : ''}><summary>${icon(ic)}<span>${title}</span>${icon('chevron', 'chev')}</summary><div class="acc-body">${body}</div></details>`;
+  const specs = p.specs.length ? `<ul class="spec">${p.specs.map(x => { const i = x.indexOf(':'); return i > 0 ? `<li><b>${esc(x.slice(0, i))}:</b> ${esc(x.slice(i + 1))}</li>` : `<li>${esc(x)}</li>`; }).join('')}</ul>` : '';
+  const rv = reviews.filter(r => String(r.product_id) === p.id);
+
+  function reviewsHTML() {
+    const list = rv.length ? rv.map(r => `<div class="review"><div class="review-top">${stars(r.rating)}<span>${esc(String(r.date || '').slice(0, 10))}</span></div>
+      <h4>${esc(r.title || '')}</h4><p>${esc(r.text || '')}</p><small>${esc(r.name || 'Customer')}</small></div>`).join('')
+      : '<p>No reviews yet. Be the first to share how it looks on you.</p>';
+    return list + `<form class="review-form" id="reviewForm">
+      <b style="font-weight:500;color:var(--ink)">Write a review</b>
+      <div class="row-2"><input class="input" name="name" required placeholder="Your name"><select class="select block" name="rating" aria-label="Rating" style="height:52px"><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select></div>
+      <input class="input" name="title" placeholder="Title (optional)">
+      <textarea class="input" name="text" required placeholder="How does it look and feel?"></textarea>
+      <button class="btn btn-dark">Submit review</button></form>`;
+  }
+  $('#acc').innerHTML = sec('info', 'Description', para(p.description) + specs)
+    + (p.how_to_wear ? sec('head', 'How to Wear', para(p.how_to_wear)) : '')
+    + (p.care ? sec('hair', 'Care Instructions', para(p.care)) : '')
+    + sec('chat', `Reviews (${p.reviews || rv.length})`, reviewsHTML());
+
+  $('#reviewForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, b = f.querySelector('button');
+    b.disabled = true;
+    const r = await api('review', { product_id: p.id, name: f.name.value, rating: f.rating.value, title: f.title.value, text: f.text.value });
+    b.disabled = false;
+    if (r.ok) { f.reset(); toast('Thank you! Your review will show once we approve it.'); }
+    else toast(esc(r.error || 'Could not send your review. Please try again.'));
+  });
+
+  /* ---- Related ---- */
+  let rel = products.filter(o => o.id !== p.id && o.categories.some(c => p.categories.includes(c)));
+  rel = [...rel, ...products.filter(o => o.id !== p.id && !rel.includes(o))].slice(0, 4);
+  if (rel.length) $('#related').innerHTML = rel.map(o => card(o)).join(''); else $('#relatedSec').hidden = true;
 });
 </script>
 </body>

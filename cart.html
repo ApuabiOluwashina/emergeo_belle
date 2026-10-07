@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Wishlist | LuxeLocks</title>
+<title>Your Cart | LuxeLocks</title>
 <meta name="theme-color" content="#08292e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -483,12 +483,9 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
  .toolbar .select{width:100%}
 }
 
-.wl-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:26px}
-.wl-note{background:var(--soft);border-radius:12px;padding:14px 18px;display:flex;gap:12px;align-items:center;margin-bottom:24px;font-size:15px;color:var(--text)}
-.wl-note .ic{color:var(--teal-700)}
 </style>
 </head>
-<body data-page="wishlist">
+<body data-page="cart">
 <div class="topbar"><div class="container">
   <div class="ann"><span data-icon="truck"></span><span id="annText"></span></div>
   <nav class="top-links" id="topLinks" aria-label="Quick links"></nav>
@@ -512,12 +509,25 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
 
 <main>
   <div class="container">
-    <div class="page-head wl-head">
-      <div><h1 class="page-title" data-s="wishlist_title"></h1><p class="page-sub" id="wlCount"></p></div>
-      <button class="btn btn-outline" id="addAll">ADD ALL TO CART <span data-icon="bag"></span></button>
+    <div class="page-head"><h1 class="page-title light" data-s="cart_title"></h1><p class="page-sub" data-s="cart_subtitle"></p></div>
+    <div class="cart-grid" id="cartGrid">
+      <div class="panel" id="lines"></div>
+      <aside class="panel summary">
+        <h2>Order Summary</h2>
+        <div class="sum-row"><span>Subtotal</span><span id="sSub"></span></div>
+        <div class="sum-row"><span id="sShipLbl">Shipping</span><span id="sShip"></span></div>
+        <div class="sum-row disc"><span>Discount <small id="sCode"></small></span><span id="sDisc"></span></div>
+        <div class="sum-total"><span>Total</span><span id="sTotal"></span></div>
+        <a href="payment.html" class="btn btn-dark btn-block checkout-btn">CHECKOUT <span data-icon="arrow"></span></a>
+        <div class="guarantee"><span data-icon="shield"></span><div><p data-s="guarantee_title"></p><p data-s="guarantee_text"></p></div></div>
+        <div class="promo">
+          <h3>Promo Code</h3>
+          <form class="promo-form" id="promoForm"><input class="input" id="promoIn" placeholder="Enter promo code" autocomplete="off" aria-label="Promo code"><button class="btn btn-light">Apply</button></form>
+          <p class="promo-msg" id="promoMsg"></p>
+        </div>
+      </aside>
     </div>
-    <div class="wl-note" id="wlNote" hidden><span data-icon="heart"></span><span><a class="link" href="signup.html?next=wishlist.html">Sign in or create an account</a> to keep your wishlist on every device.</span></div>
-    <div class="grid grid-auto" id="wl" style="padding-bottom:64px"></div>
+    <div class="big-trust" id="bigTrust"></div>
   </div>
 </main>
 <footer class="site-footer" id="contact">
@@ -885,22 +895,72 @@ const LL = (() => {
 })();
 
 
-LL.start(({ products }) => {
-  const { $, wish, card, icon, user, addToCart, toast } = LL;
+LL.start(({ settings: S }) => {
+  const { $, esc, enc, icon, money, lenLabel, cart, saveCart, totals, store, api, imgTag, hl, slot } = LL;
+  let promo = store.get('ll_promo', null);
+
+  $('#bigTrust').innerHTML = hl('cart_trust').map(h => `<div class="trust-item">${slot(h)}<span><b>${esc(h.title)}</b><small>${esc(h.text)}</small></span></div>`).join('');
+
   function draw() {
-    const list = wish().map(id => products.find(p => p.id === id)).filter(Boolean);
-    const n = list.length;
-    $('#wlCount').textContent = n ? `${n} saved ${n === 1 ? 'wig' : 'wigs'}` : '';
-    $('#addAll').hidden = !n;
-    $('#wl').innerHTML = n ? list.map(p => card(p)).join('')
-      : `<div class="empty span-all">${icon('heart')}<h3>Your wishlist is empty</h3><p>Tap the heart on any wig to save it here for later.</p><a class="btn btn-dark" href="shop.html">Browse wigs</a></div>`;
+    const t = totals(promo);
+    if (!t.lines.length) {
+      $('#cartGrid').innerHTML = `<div class="panel empty span-all">${icon('bag')}<h3>Your cart is empty</h3><p>Find a wig you love and it will show up here.</p><a class="btn btn-dark" href="shop.html">Shop Wigs</a></div>`;
+      return;
+    }
+    $('#lines').innerHTML = t.lines.map(l => {
+      const url = 'product.html?id=' + enc(l.id);
+      return `<div class="line" data-key="${esc(l.key)}">
+        <a href="${url}" class="line-img">${imgTag(l.p.images[0], l.p.name, l.p.name)}</a>
+        <div class="line-info">
+          <h3><a href="${url}">${esc(l.p.name)}</a></h3>
+          ${l.color ? `<p class="meta">Color: <i>${esc(l.color)}</i></p>` : ''}
+          <div class="line-row"><p class="meta">${l.length ? 'Length: ' + esc(lenLabel(l.length)) : ''}${l.cap ? `${l.length ? ' &nbsp;·&nbsp; ' : ''}Cap: ${esc(l.cap)}` : ''}</p><span class="line-price">${LL.oldPrice(l.p, l.length) > l.unit ? `<s>${money(LL.oldPrice(l.p, l.length) * l.qty)}</s>` : ''}${money(l.unit * l.qty)}</span></div>
+          <div class="line-row">
+            <button class="rm" data-rm>${icon('trash')} Remove</button>
+            <div class="qty"><button type="button" data-d="-1" aria-label="Fewer">${icon('minus')}</button><input value="${l.qty}" data-qin inputmode="numeric" aria-label="Quantity"><button type="button" data-d="1" aria-label="More">${icon('plus')}</button></div>
+          </div>
+        </div></div>`;
+    }).join('');
+
+    const thr = +S.free_shipping_threshold || 0;
+    $('#sShipLbl').textContent = thr > 0 ? `Shipping (Free over ${money(thr, true)})` : 'Shipping';
+    $('#sSub').textContent = money(t.sub);
+    $('#sShip').textContent = money(t.ship);
+    $('#sDisc').textContent = '– ' + money(t.disc);
+    $('#sCode').innerHTML = promo ? `(${esc(promo.code)}) <button type="button" id="rmPromo">remove</button>` : '';
+    $('#sTotal').textContent = money(t.total);
+    if (promo && t.disc === 0 && promo.min) $('#promoMsg').innerHTML = `<span class="err">${esc(promo.code)} needs a subtotal of at least ${money(promo.min)}.</span>`;
+    const rp = $('#rmPromo'); if (rp) rp.onclick = () => { promo = null; store.del('ll_promo'); $('#promoMsg').textContent = ''; draw(); };
   }
-  $('#wlNote').hidden = !!user();
-  $('#addAll').onclick = () => {
-    wish().forEach(id => { const p = products.find(x => x.id === id); if (p && p.stock !== 0) addToCart(id, {}, 1, true); });
-    toast('Your saved wigs are in the cart.<a href="cart.html">View cart</a>');
-  };
-  document.addEventListener('wishchange', draw);
+
+  function change(key, fn) {
+    const c = cart(); const i = c.findIndex(x => x.key === key); if (i < 0) return;
+    fn(c, i); saveCart(c); draw();
+  }
+  $('#lines').addEventListener('click', e => {
+    const line = e.target.closest('.line'); if (!line) return;
+    const key = line.dataset.key;
+    if (e.target.closest('[data-rm]')) change(key, (c, i) => c.splice(i, 1));
+    const d = e.target.closest('[data-d]');
+    if (d) change(key, (c, i) => { c[i].qty = Math.max(1, Math.min(99, c[i].qty + +d.dataset.d)); });
+  });
+  $('#lines').addEventListener('change', e => {
+    if (!e.target.matches('[data-qin]')) return;
+    const key = e.target.closest('.line').dataset.key;
+    change(key, (c, i) => { c[i].qty = Math.max(1, Math.min(99, parseInt(e.target.value, 10) || 1)); });
+  });
+
+  $('#promoForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const code = $('#promoIn').value.trim(); if (!code) return;
+    const b = e.target.querySelector('button'); b.disabled = true;
+    const r = await api('promo', { code, subtotal: totals(null).sub });
+    b.disabled = false;
+    if (r.ok) { promo = r.promo; store.set('ll_promo', promo); $('#promoIn').value = ''; $('#promoMsg').innerHTML = `<span class="ok">Code ${esc(promo.code)} applied.</span>`; }
+    else $('#promoMsg').innerHTML = `<span class="err">${esc(r.error || 'That code is not valid.')}</span>`;
+    draw();
+  });
+
   draw();
 });
 </script>

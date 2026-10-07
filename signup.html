@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Wishlist | LuxeLocks</title>
+<title>Create Account | LuxeLocks</title>
 <meta name="theme-color" content="#08292e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -483,12 +483,9 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
  .toolbar .select{width:100%}
 }
 
-.wl-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:26px}
-.wl-note{background:var(--soft);border-radius:12px;padding:14px 18px;display:flex;gap:12px;align-items:center;margin-bottom:24px;font-size:15px;color:var(--text)}
-.wl-note .ic{color:var(--teal-700)}
 </style>
 </head>
-<body data-page="wishlist">
+<body data-page="signup">
 <div class="topbar"><div class="container">
   <div class="ann"><span data-icon="truck"></span><span id="annText"></span></div>
   <nav class="top-links" id="topLinks" aria-label="Quick links"></nav>
@@ -512,12 +509,58 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
 
 <main>
   <div class="container">
-    <div class="page-head wl-head">
-      <div><h1 class="page-title" data-s="wishlist_title"></h1><p class="page-sub" id="wlCount"></p></div>
-      <button class="btn btn-outline" id="addAll">ADD ALL TO CART <span data-icon="bag"></span></button>
+    <div class="auth" id="auth">
+      <div class="auth-art">
+        <img id="authImg" alt="">
+        <p class="eyebrow" data-s="signup_eyebrow"></p>
+        <h2 data-s="signup_title"></h2>
+        <p data-s="signup_text"></p>
+        <ul class="perks" id="perks"></ul>
+      </div>
+      <div class="auth-form">
+        <div class="tabs" role="tablist">
+          <button class="on" data-tab="signup" role="tab">Create Account</button>
+          <button data-tab="login" role="tab">Sign In</button>
+        </div>
+
+        <form id="signupForm" novalidate>
+          <h2 class="form-title">Create your account</h2>
+          <p class="form-sub">It takes less than a minute.</p>
+          <div class="row-2">
+            <div class="field"><label for="fn">First name</label><input class="input" id="fn" name="first_name" required autocomplete="given-name"></div>
+            <div class="field"><label for="ln">Last name</label><input class="input" id="ln" name="last_name" required autocomplete="family-name"></div>
+          </div>
+          <div class="field"><label for="em">Email address</label><input class="input" id="em" type="email" name="email" required autocomplete="email"></div>
+          <div class="field"><label for="ph">Phone number</label><input class="input" id="ph" type="tel" name="phone" autocomplete="tel" placeholder="+234 801 234 5678"></div>
+          <div class="row-2">
+            <div class="field"><label for="pw1">Password</label><div class="pw"><input class="input" id="pw1" type="password" name="password" minlength="8" required autocomplete="new-password" placeholder="At least 8 characters"><button type="button" class="show">Show</button></div></div>
+            <div class="field"><label for="pw2">Confirm password</label><div class="pw"><input class="input" id="pw2" type="password" name="confirm" required autocomplete="new-password"><button type="button" class="show">Show</button></div></div>
+          </div>
+          <label class="check"><input type="checkbox" name="newsletter" checked> Send me new arrivals, offers and wig care tips.</label>
+          <label class="check"><input type="checkbox" name="terms" required> I agree to the terms of service and privacy policy.</label>
+          <p class="form-msg err" id="suMsg"></p>
+          <button class="btn btn-dark btn-block btn-lg">CREATE ACCOUNT</button>
+        </form>
+
+        <form id="loginForm" novalidate hidden>
+          <h2 class="form-title">Welcome back</h2>
+          <p class="form-sub">Sign in to see your orders and saved wigs.</p>
+          <div class="field"><label for="lem">Email address</label><input class="input" id="lem" type="email" name="email" required autocomplete="email"></div>
+          <div class="field"><label for="lpw">Password</label><div class="pw"><input class="input" id="lpw" type="password" name="password" required autocomplete="current-password"><button type="button" class="show">Show</button></div></div>
+          <p class="form-msg err" id="liMsg"></p>
+          <button class="btn btn-dark btn-block btn-lg">SIGN IN</button>
+          <p class="form-sub" style="margin-top:16px;font-size:14.5px">Forgot your password? Email us at <a class="link" id="helpMail"></a> and we'll reset it for you.</p>
+        </form>
+      </div>
     </div>
-    <div class="wl-note" id="wlNote" hidden><span data-icon="heart"></span><span><a class="link" href="signup.html?next=wishlist.html">Sign in or create an account</a> to keep your wishlist on every device.</span></div>
-    <div class="grid grid-auto" id="wl" style="padding-bottom:64px"></div>
+
+    <div class="account" id="account" hidden>
+      <div class="acct-head">
+        <div><p class="eyebrow" style="color:var(--teal-600)">My account</p><h1 class="page-title" id="hiName"></h1><p class="page-sub" id="hiEmail"></p></div>
+        <div class="acct-links"><a class="btn btn-outline" href="wishlist.html">WISHLIST</a><a class="btn btn-dark" href="shop.html">SHOP WIGS</a><button class="btn btn-light" id="signOut">Sign out</button></div>
+      </div>
+      <section class="panel" id="orders"><h2 class="ph"><span data-icon="bag"></span>My orders</h2><div id="orderList"><p class="form-sub">Loading your orders...</p></div></section>
+    </div>
   </div>
 </main>
 <footer class="site-footer" id="contact">
@@ -885,23 +928,64 @@ const LL = (() => {
 })();
 
 
-LL.start(({ products }) => {
-  const { $, wish, card, icon, user, addToCart, toast } = LL;
-  function draw() {
-    const list = wish().map(id => products.find(p => p.id === id)).filter(Boolean);
-    const n = list.length;
-    $('#wlCount').textContent = n ? `${n} saved ${n === 1 ? 'wig' : 'wigs'}` : '';
-    $('#addAll').hidden = !n;
-    $('#wl').innerHTML = n ? list.map(p => card(p)).join('')
-      : `<div class="empty span-all">${icon('heart')}<h3>Your wishlist is empty</h3><p>Tap the heart on any wig to save it here for later.</p><a class="btn btn-dark" href="shop.html">Browse wigs</a></div>`;
+LL.start(({ settings: S }) => {
+  const { $, $$, esc, img, ph, hl, slot, api, store, user, wish, money, params, syncWish, updateCounts, icon } = LL;
+  $('#authImg').src = img(S.signup_image) || ph('Sign-up image');
+  $('#perks').innerHTML = hl('signup_perks').map(h => `<li><span class="ic-circle">${slot(h)}</span><span>${esc(h.title)}<small>${esc(h.text)}</small></span></li>`).join('');
+  const hm = $('#helpMail'); hm.textContent = S.contact_email; hm.href = 'mailto:' + S.contact_email;
+  const next = params.get('next');
+
+  function tab(name) {
+    $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+    $('#signupForm').hidden = name !== 'signup';
+    $('#loginForm').hidden = name !== 'login';
   }
-  $('#wlNote').hidden = !!user();
-  $('#addAll').onclick = () => {
-    wish().forEach(id => { const p = products.find(x => x.id === id); if (p && p.stock !== 0) addToCart(id, {}, 1, true); });
-    toast('Your saved wigs are in the cart.<a href="cart.html">View cart</a>');
-  };
-  document.addEventListener('wishchange', draw);
-  draw();
+  $$('.tabs button').forEach(b => b.onclick = () => tab(b.dataset.tab));
+  if (location.hash === '#login') tab('login');
+
+  $$('.pw .show').forEach(b => b.onclick = () => {
+    const i = b.previousElementSibling; const show = i.type === 'password';
+    i.type = show ? 'text' : 'password'; b.textContent = show ? 'Hide' : 'Show';
+  });
+
+  function done(r) {
+    store.set('ll_user', r.user);
+    if (Array.isArray(r.wishlist) && r.wishlist.length) store.set('ll_wish', [...new Set([...wish(), ...r.wishlist.map(String)])]);
+    syncWish(); updateCounts();
+    if (next && /^[\w-]+\.html/.test(next)) location.href = next; else showAccount();
+  }
+  async function submit(form, action, msgEl, extraCheck) {
+    msgEl.textContent = '';
+    for (const el of form.querySelectorAll('[required]')) if (!el.checkValidity()) { el.reportValidity(); return; }
+    const f = Object.fromEntries(new FormData(form));
+    const problem = extraCheck && extraCheck(f); if (problem) { msgEl.textContent = problem; return; }
+    const b = form.querySelector('.btn'); const label = b.textContent;
+    b.disabled = true; b.textContent = 'PLEASE WAIT...';
+    const r = await api(action, { ...f, newsletter: !!f.newsletter, confirm: undefined, terms: undefined });
+    b.disabled = false; b.textContent = label;
+    if (r.ok) done(r); else msgEl.textContent = r.error || 'Something went wrong. Please try again.';
+  }
+  $('#signupForm').addEventListener('submit', e => { e.preventDefault(); submit(e.target, 'signup', $('#suMsg'), f =>
+    f.password.length < 8 ? 'Your password needs at least 8 characters.' : (f.password !== f.confirm ? "The two passwords don't match." : '')); });
+  $('#loginForm').addEventListener('submit', e => { e.preventDefault(); submit(e.target, 'login', $('#liMsg')); });
+
+  async function showAccount() {
+    const u = user(); if (!u) return;
+    $('#auth').hidden = true; $('#account').hidden = false;
+    document.title = 'My Account | ' + S.store_name;
+    $('#hiName').textContent = `Hi, ${u.first_name || 'there'}`;
+    $('#hiEmail').textContent = u.email;
+    $('#signOut').onclick = () => { store.del('ll_user'); location.href = 'signup.html'; };
+    const r = await api('orders', { token: u.token });
+    const list = (r.ok && r.orders) || [];
+    if (!r.ok && /session/i.test(r.error || '')) { store.del('ll_user'); location.href = 'signup.html#login'; return; }
+    $('#orderList').innerHTML = list.length ? `<div class="table-wrap"><table class="orders"><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead><tbody>${
+      list.map(o => `<tr><td><b>${esc(o.order_id)}</b></td><td>${esc(String(o.created).slice(0, 10))}</td><td style="white-space:pre-line">${esc(o.items)}</td><td>${money(o.total)}</td>
+      <td><span class="tag ${/paid/i.test(o.payment_status) && !/await/i.test(o.payment_status) ? 'paid' : ''}">${esc(o.payment_status)}</span></td><td><span class="tag">${esc(o.order_status)}</span></td></tr>`).join('')}</tbody></table></div>`
+      : `<div class="empty" style="padding:30px 10px">${icon('bag')}<h3>No orders yet</h3><p>When you place an order it will show here.</p></div>`;
+    if (location.hash === '#orders') $('#orders').scrollIntoView({ behavior: 'smooth' });
+  }
+  if (user()) showAccount();
 });
 </script>
 </body>

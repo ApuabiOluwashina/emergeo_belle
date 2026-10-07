@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Wishlist | LuxeLocks</title>
+<title>LuxeLocks | Premium Human Hair Wigs</title>
+<meta name="description" content="Premium human hair lace front wigs crafted for a flawless fit, natural movement and effortless confidence.">
 <meta name="theme-color" content="#08292e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -483,12 +484,9 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
  .toolbar .select{width:100%}
 }
 
-.wl-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:26px}
-.wl-note{background:var(--soft);border-radius:12px;padding:14px 18px;display:flex;gap:12px;align-items:center;margin-bottom:24px;font-size:15px;color:var(--text)}
-.wl-note .ic{color:var(--teal-700)}
 </style>
 </head>
-<body data-page="wishlist">
+<body data-page="home">
 <div class="topbar"><div class="container">
   <div class="ann"><span data-icon="truck"></span><span id="annText"></span></div>
   <nav class="top-links" id="topLinks" aria-label="Quick links"></nav>
@@ -511,15 +509,58 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
 <div class="loader"><span></span></div>
 
 <main>
-  <div class="container">
-    <div class="page-head wl-head">
-      <div><h1 class="page-title" data-s="wishlist_title"></h1><p class="page-sub" id="wlCount"></p></div>
-      <button class="btn btn-outline" id="addAll">ADD ALL TO CART <span data-icon="bag"></span></button>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow" data-s="hero_eyebrow"></p>
+        <h1 data-s="hero_title"></h1>
+        <p class="lead" data-s="hero_text"></p>
+        <div class="hero-btns">
+          <a class="btn btn-mint" id="heroBtn" href="shop.html"></a>
+          <button class="btn btn-ghost" id="videoBtn" type="button"></button>
+        </div>
+      </div>
+      <div class="hero-media"><img id="heroImg" alt=""></div>
     </div>
-    <div class="wl-note" id="wlNote" hidden><span data-icon="heart"></span><span><a class="link" href="signup.html?next=wishlist.html">Sign in or create an account</a> to keep your wishlist on every device.</span></div>
-    <div class="grid grid-auto" id="wl" style="padding-bottom:64px"></div>
-  </div>
+  </section>
+
+  <div class="container"><div class="feature-strip" id="strip"></div></div>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head"><h2 data-s="category_title"></h2><span class="orn"></span></div>
+      <div class="cat-row" id="cats"></div>
+    </div>
+  </section>
+
+  <section class="section pt0">
+    <div class="container">
+      <div class="section-head"><h2 data-s="featured_title"></h2><span class="orn"></span></div>
+      <div class="grid grid-4" id="featured"></div>
+    </div>
+  </section>
+
+  <section class="section pt0">
+    <div class="container">
+      <div class="offer">
+        <div class="offer-copy">
+          <p class="eyebrow" data-s="offer_eyebrow"></p>
+          <h3 data-s="offer_title"></h3>
+          <p data-s="offer_text"></p>
+          <form class="offer-form" id="newsForm">
+            <label class="input-ic"><span data-icon="mail"></span><input type="email" name="email" required placeholder="Enter your email address" aria-label="Email address"></label>
+            <button class="btn btn-mint" data-s="offer_button_text"></button>
+          </form>
+        </div>
+        <div class="offer-media"><img id="offerImg" alt=""></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="trust"><div class="container trust-row" id="trust"></div></section>
 </main>
+
+<div class="modal" id="videoModal"><button class="x" id="videoClose" data-icon="close" aria-label="Close video"></button><div class="modal-box" id="videoBox"></div></div>
 <footer class="site-footer" id="contact">
   <div class="container ft">
     <div id="about"><a href="index.html" class="logo" id="footLogo"></a><p data-s="footer_about"></p><div class="socials" id="socials"></div></div>
@@ -885,23 +926,57 @@ const LL = (() => {
 })();
 
 
-LL.start(({ products }) => {
-  const { $, wish, card, icon, user, addToCart, toast } = LL;
-  function draw() {
-    const list = wish().map(id => products.find(p => p.id === id)).filter(Boolean);
-    const n = list.length;
-    $('#wlCount').textContent = n ? `${n} saved ${n === 1 ? 'wig' : 'wigs'}` : '';
-    $('#addAll').hidden = !n;
-    $('#wl').innerHTML = n ? list.map(p => card(p)).join('')
-      : `<div class="empty span-all">${icon('heart')}<h3>Your wishlist is empty</h3><p>Tap the heart on any wig to save it here for later.</p><a class="btn btn-dark" href="shop.html">Browse wigs</a></div>`;
-  }
-  $('#wlNote').hidden = !!user();
-  $('#addAll').onclick = () => {
-    wish().forEach(id => { const p = products.find(x => x.id === id); if (p && p.stock !== 0) addToCart(id, {}, 1, true); });
-    toast('Your saved wigs are in the cart.<a href="cart.html">View cart</a>');
+LL.start(({ settings: S, categories, products }) => {
+  const { $, esc, enc, img, ph, card, hl, slot, api, toast, icon, imgTag } = LL;
+
+  $('#heroImg').src = img(S.hero_image) || ph('Hero image');
+  const hb = $('#heroBtn'); hb.textContent = S.hero_button_text; hb.href = S.hero_button_link || 'shop.html';
+
+  // Watch video
+  const vb = $('#videoBtn'), modal = $('#videoModal'), box = $('#videoBox');
+  vb.innerHTML = icon('play') + esc(S.video_button_text);
+  vb.hidden = !S.video_button_text;
+  vb.onclick = () => {
+    const u = String(S.video_url || '').trim();
+    if (!u) { toast('Our video is coming soon.'); return; }
+    const yt = u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
+    box.innerHTML = yt
+      ? `<iframe src="https://www.youtube.com/embed/${yt[1]}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen title="Video"></iframe>`
+      : `<video src="${esc(img(u))}" controls autoplay playsinline></video>`;
+    modal.classList.add('open');
   };
-  document.addEventListener('wishchange', draw);
-  draw();
+  const closeVideo = () => { modal.classList.remove('open'); box.innerHTML = ''; };
+  $('#videoClose').onclick = closeVideo;
+  modal.addEventListener('click', e => { if (e.target === modal) closeVideo(); });
+
+  // Feature strip under the hero
+  $('#strip').innerHTML = hl('hero_strip').map(h =>
+    `<div class="fs-item"><span class="ic-circle">${slot(h)}</span><span>${esc(h.title)}<br>${esc(h.text)}</span></div>`).join('');
+
+  // Categories
+  $('#cats').innerHTML = categories.map(c =>
+    `<a class="cat" href="${esc(c.link || 'shop.html?cat=' + enc(c.name))}"><span class="cat-img">${imgTag(img(c.image), c.name, c.name)}</span>${esc(c.name)}</a>`).join('');
+
+  // Featured products
+  let feat = products.filter(p => p.featured);
+  if (!feat.length) feat = products;
+  $('#featured').innerHTML = feat.slice(0, +S.featured_count || 4).map(p => card(p)).join('');
+
+  // Offer banner + newsletter
+  $('#offerImg').src = img(S.offer_image) || ph('Offer image');
+  $('#newsForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, btn = f.querySelector('button'), email = f.email.value.trim();
+    btn.disabled = true;
+    const r = await api('newsletter', { email, source: 'home' });
+    btn.disabled = false;
+    if (r.ok) { f.reset(); toast("You're in! Check your inbox for your welcome offer."); }
+    else toast(esc(r.error || 'Something went wrong. Please try again.'));
+  });
+
+  // Trust bar
+  $('#trust').innerHTML = hl('trust_bar').map(h =>
+    `<div class="trust-item">${slot(h)}<span><b>${esc(h.title)}</b><small>${esc(h.text)}</small></span></div>`).join('');
 });
 </script>
 </body>

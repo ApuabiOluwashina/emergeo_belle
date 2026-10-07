@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Wishlist | LuxeLocks</title>
+<title>Shop All Wigs | LuxeLocks</title>
+<meta name="description" content="Shop lace front, full lace, body wave, straight, curly and bob wigs.">
 <meta name="theme-color" content="#08292e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -483,12 +484,19 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
  .toolbar .select{width:100%}
 }
 
-.wl-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:26px}
-.wl-note{background:var(--soft);border-radius:12px;padding:14px 18px;display:flex;gap:12px;align-items:center;margin-bottom:24px;font-size:15px;color:var(--text)}
-.wl-note .ic{color:var(--teal-700)}
+.toolbar{scroll-margin-top:110px}
+.pager{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0 70px}
+.pager button{min-width:44px;height:44px;padding:0 14px;border-radius:999px;border:1px solid #d6dcd9;background:#fff;font-size:16px;color:var(--ink);transition:.2s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.pager button:hover:not([disabled]){border-color:var(--teal-700)}
+.pager button.on{background:var(--teal-800);border-color:var(--teal-800);color:#fff}
+.pager button[disabled]{opacity:.4;cursor:default}
+.pager .ic{width:18px;height:18px}
+.pager .gap{color:var(--muted);padding:0 4px}
+.prev .ic{transform:rotate(90deg)}.next .ic{transform:rotate(-90deg)}
+@media(max-width:640px){.pager{gap:5px}.pager button{min-width:34px;height:34px;padding:0 6px;font-size:14px}.pager .gap{padding:0}.pager .lbl{display:none}}
 </style>
 </head>
-<body data-page="wishlist">
+<body data-page="shop" data-nav="shop.html">
 <div class="topbar"><div class="container">
   <div class="ann"><span data-icon="truck"></span><span id="annText"></span></div>
   <nav class="top-links" id="topLinks" aria-label="Quick links"></nav>
@@ -512,12 +520,20 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
 
 <main>
   <div class="container">
-    <div class="page-head wl-head">
-      <div><h1 class="page-title" data-s="wishlist_title"></h1><p class="page-sub" id="wlCount"></p></div>
-      <button class="btn btn-outline" id="addAll">ADD ALL TO CART <span data-icon="bag"></span></button>
+    <div class="page-head"><h1 class="page-title" data-s="shop_title"></h1></div>
+    <div class="toolbar">
+      <div class="pills" id="pills"></div>
+      <select class="select" id="sort" aria-label="Sort products">
+        <option value="featured">Sort by: Featured</option>
+        <option value="new">Sort by: Newest</option>
+        <option value="low">Price: Low to High</option>
+        <option value="high">Price: High to Low</option>
+        <option value="rating">Top Rated</option>
+      </select>
     </div>
-    <div class="wl-note" id="wlNote" hidden><span data-icon="heart"></span><span><a class="link" href="signup.html?next=wishlist.html">Sign in or create an account</a> to keep your wishlist on every device.</span></div>
-    <div class="grid grid-auto" id="wl" style="padding-bottom:64px"></div>
+    <p class="result-count" id="count"></p>
+    <div class="grid grid-auto" id="grid" style="padding-bottom:36px"></div>
+    <nav class="pager" id="pager" aria-label="Pages"></nav>
   </div>
 </main>
 <footer class="site-footer" id="contact">
@@ -885,23 +901,81 @@ const LL = (() => {
 })();
 
 
-LL.start(({ products }) => {
-  const { $, wish, card, icon, user, addToCart, toast } = LL;
-  function draw() {
-    const list = wish().map(id => products.find(p => p.id === id)).filter(Boolean);
-    const n = list.length;
-    $('#wlCount').textContent = n ? `${n} saved ${n === 1 ? 'wig' : 'wigs'}` : '';
-    $('#addAll').hidden = !n;
-    $('#wl').innerHTML = n ? list.map(p => card(p)).join('')
-      : `<div class="empty span-all">${icon('heart')}<h3>Your wishlist is empty</h3><p>Tap the heart on any wig to save it here for later.</p><a class="btn btn-dark" href="shop.html">Browse wigs</a></div>`;
+LL.start(({ products, categories, settings: S }) => {
+  const { $, esc, card, params, icon, priceFor, defaults } = LL;
+  const known = categories.map(c => String(c.name));
+  const used = new Set(products.flatMap(p => p.categories));
+  const pills = [...known.filter(n => used.has(n)), ...[...used].filter(n => !known.includes(n))];
+
+  let cat = params.get('cat') || 'All';
+  let q = (params.get('q') || '').trim();
+  let sort = params.get('sort') || 'featured';
+  let page = Math.max(1, parseInt(params.get('page'), 10) || 1);
+  const PER = Math.max(4, Math.min(120, +S.products_per_page || 24));
+  $('#sort').value = sort;
+  if (q) document.title = `Search: ${q} | LuxeLocks`;
+
+  const priceOf = p => priceFor(p, defaults(p).length);
+
+  function drawPills() {
+    $('#pills').innerHTML = ['All', ...pills].map(n =>
+      `<button class="pill ${n === cat ? 'on' : ''}" data-cat="${esc(n)}">${esc(n)}</button>`).join('');
   }
-  $('#wlNote').hidden = !!user();
-  $('#addAll').onclick = () => {
-    wish().forEach(id => { const p = products.find(x => x.id === id); if (p && p.stock !== 0) addToCart(id, {}, 1, true); });
-    toast('Your saved wigs are in the cart.<a href="cart.html">View cart</a>');
-  };
-  document.addEventListener('wishchange', draw);
-  draw();
+  function draw() {
+    let list = products.filter(p => cat === 'All' || p.categories.includes(cat));
+    if (q) {
+      const s = q.toLowerCase();
+      list = list.filter(p => [p.name, p.description, p.categories.join(' '), p.badge, p.colors.map(c => c.name).join(' ')].join(' ').toLowerCase().includes(s));
+    }
+    if (sort === 'low') list.sort((a, b) => priceOf(a) - priceOf(b));
+    else if (sort === 'high') list.sort((a, b) => priceOf(b) - priceOf(a));
+    else if (sort === 'rating') list.sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
+    else if (sort === 'new') list.reverse();
+
+    const n = list.length;
+    const pages = Math.max(1, Math.ceil(n / PER));
+    page = Math.min(page, pages);
+    const from = (page - 1) * PER, shown = list.slice(from, from + PER);
+    const range = n > PER ? `Showing ${from + 1}&ndash;${from + shown.length} of ` : '';
+    $('#count').innerHTML = (q ? `${range}${n} result${n === 1 ? '' : 's'} for <b>&ldquo;${esc(q)}&rdquo;</b>` : `${range}${n} wig${n === 1 ? '' : 's'}`)
+      + (q ? ` <button class="chip" id="clearQ">${icon('close')} Clear search</button>` : '');
+    drawPager(pages);
+    $('#grid').innerHTML = n ? shown.map(p => card(p)).join('')
+      : `<div class="empty span-all">${icon('search')}<h3>Nothing here yet</h3><p>Try another category or search word.</p><a class="btn btn-dark" href="shop.html">See all wigs</a></div>`;
+    const cq = $('#clearQ'); if (cq) cq.onclick = () => { q = ''; page = 1; update(); };
+
+    const u = new URLSearchParams();
+    if (cat !== 'All') u.set('cat', cat);
+    if (q) u.set('q', q);
+    if (sort !== 'featured') u.set('sort', sort);
+    if (page > 1) u.set('page', page);
+    history.replaceState(null, '', 'shop.html' + (u.toString() ? '?' + u : ''));
+  }
+  function update() { drawPills(); draw(); }
+
+  // Page numbers: 1 ... 4 5 6 ... 15
+  function drawPager(pages) {
+    const el = $('#pager');
+    if (pages < 2) { el.innerHTML = ''; return; }
+    const nums = [];
+    for (let i = 1; i <= pages; i++) if (i === 1 || i === pages || Math.abs(i - page) <= 1 || (page <= 3 && i <= 4) || (page >= pages - 2 && i >= pages - 3)) nums.push(i);
+    let html = `<button class="prev" data-page="${page - 1}" ${page === 1 ? 'disabled' : ''} aria-label="Previous page">${icon('chevron')}<span class="lbl">Prev</span></button>`;
+    nums.forEach((i, k) => {
+      if (k && i - nums[k - 1] > 1) html += '<span class="gap">&hellip;</span>';
+      html += `<button data-page="${i}" class="${i === page ? 'on' : ''}" ${i === page ? 'aria-current="page"' : ''}>${i}</button>`;
+    });
+    html += `<button class="next" data-page="${page + 1}" ${page === pages ? 'disabled' : ''} aria-label="Next page"><span class="lbl">Next</span>${icon('chevron')}</button>`;
+    el.innerHTML = html;
+  }
+  $('#pager').addEventListener('click', e => {
+    const b = e.target.closest('[data-page]'); if (!b || b.disabled) return;
+    page = +b.dataset.page; draw();
+    $('.toolbar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  $('#pills').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) { cat = b.dataset.cat; page = 1; update(); } });
+  $('#sort').addEventListener('change', e => { sort = e.target.value; page = 1; draw(); });
+  update();
 });
 </script>
 </body>

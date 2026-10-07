@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Wishlist | LuxeLocks</title>
+<title>Checkout | LuxeLocks</title>
 <meta name="theme-color" content="#08292e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -483,12 +483,9 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
  .toolbar .select{width:100%}
 }
 
-.wl-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:26px}
-.wl-note{background:var(--soft);border-radius:12px;padding:14px 18px;display:flex;gap:12px;align-items:center;margin-bottom:24px;font-size:15px;color:var(--text)}
-.wl-note .ic{color:var(--teal-700)}
 </style>
 </head>
-<body data-page="wishlist">
+<body data-page="payment">
 <div class="topbar"><div class="container">
   <div class="ann"><span data-icon="truck"></span><span id="annText"></span></div>
   <nav class="top-links" id="topLinks" aria-label="Quick links"></nav>
@@ -512,12 +509,65 @@ textarea.input{height:auto;padding:12px 16px;resize:vertical;min-height:90px}
 
 <main>
   <div class="container">
-    <div class="page-head wl-head">
-      <div><h1 class="page-title" data-s="wishlist_title"></h1><p class="page-sub" id="wlCount"></p></div>
-      <button class="btn btn-outline" id="addAll">ADD ALL TO CART <span data-icon="bag"></span></button>
-    </div>
-    <div class="wl-note" id="wlNote" hidden><span data-icon="heart"></span><span><a class="link" href="signup.html?next=wishlist.html">Sign in or create an account</a> to keep your wishlist on every device.</span></div>
-    <div class="grid grid-auto" id="wl" style="padding-bottom:64px"></div>
+    <div class="page-head" id="payHead"><h1 class="page-title">Checkout</h1></div>
+    <div class="steps" id="steps"><span class="done"><b>1</b>Cart</span><i></i><span class="cur" id="st2"><b>2</b>Details &amp; Payment</span><i></i><span id="st3"><b>3</b>Confirmation</span></div>
+
+    <form class="pay-grid" id="payForm" novalidate>
+      <div>
+        <section class="panel">
+          <h2 class="ph"><span data-icon="user"></span>Contact</h2>
+          <p class="mini-note" id="signinNote">Have an account? <a class="link" href="signup.html?next=payment.html#login">Sign in</a> for a faster checkout.</p>
+          <div class="row-2">
+            <div class="field"><label for="c1">First name</label><input class="input" id="c1" name="first_name" required autocomplete="given-name"></div>
+            <div class="field"><label for="c2">Last name</label><input class="input" id="c2" name="last_name" required autocomplete="family-name"></div>
+          </div>
+          <div class="row-2">
+            <div class="field"><label for="c3">Email address</label><input class="input" id="c3" type="email" name="email" required autocomplete="email"></div>
+            <div class="field"><label for="c4">Phone number</label><input class="input" id="c4" type="tel" name="phone" required autocomplete="tel"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2 class="ph"><span data-icon="pin"></span>Delivery address</h2>
+          <div class="field"><label for="a1">Street address</label><input class="input" id="a1" name="address" required autocomplete="street-address"></div>
+          <div class="row-2">
+            <div class="field"><label for="a2">City</label><input class="input" id="a2" name="city" required autocomplete="address-level2"></div>
+            <div class="field"><label for="a3">State</label><input class="input" id="a3" name="state" required autocomplete="address-level1"></div>
+          </div>
+          <div class="row-2">
+            <div class="field"><label for="a4">Country</label><input class="input" id="a4" name="country" required value="Nigeria" autocomplete="country-name"></div>
+            <div class="field"><label for="a5">Postal code (optional)</label><input class="input" id="a5" name="postal" autocomplete="postal-code"></div>
+          </div>
+          <div class="field"><label for="a6">Delivery note (optional)</label><textarea class="input" id="a6" name="note" rows="2" placeholder="Landmark, gate code, best time to call..."></textarea></div>
+        </section>
+
+        <section class="panel">
+          <h2 class="ph"><span data-icon="truck"></span>Delivery method</h2>
+          <div id="shipOpts"></div>
+        </section>
+
+        <section class="panel">
+          <h2 class="ph"><span data-icon="lock"></span>Payment</h2>
+          <div id="payOpts"></div>
+          <div class="pay-note" id="payNote" hidden></div>
+        </section>
+      </div>
+
+      <aside class="panel summary sticky">
+        <h2>Order Summary</h2>
+        <div id="miniLines"></div>
+        <div class="sum-row" style="margin-top:10px"><span>Subtotal</span><span id="sSub"></span></div>
+        <div class="sum-row"><span>Shipping</span><span id="sShip"></span></div>
+        <div class="sum-row disc"><span>Discount <small id="sCode"></small></span><span id="sDisc"></span></div>
+        <div class="sum-total"><span>Total</span><span id="sTotal"></span></div>
+        <button class="btn btn-dark btn-block checkout-btn" id="payBtn" type="submit"></button>
+        <p class="form-msg err" id="payMsg" style="margin-top:10px"></p>
+        <p class="secure"><span data-icon="lock"></span>Your payment details are encrypted and never stored by us.</p>
+        <p style="text-align:center;margin-top:10px"><a class="link" href="cart.html">Edit cart</a></p>
+      </aside>
+    </form>
+
+    <div class="done-box" id="doneBox" hidden></div>
   </div>
 </main>
 <footer class="site-footer" id="contact">
@@ -885,23 +935,136 @@ const LL = (() => {
 })();
 
 
-LL.start(({ products }) => {
-  const { $, wish, card, icon, user, addToCart, toast } = LL;
-  function draw() {
-    const list = wish().map(id => products.find(p => p.id === id)).filter(Boolean);
-    const n = list.length;
-    $('#wlCount').textContent = n ? `${n} saved ${n === 1 ? 'wig' : 'wigs'}` : '';
-    $('#addAll').hidden = !n;
-    $('#wl').innerHTML = n ? list.map(p => card(p)).join('')
-      : `<div class="empty span-all">${icon('heart')}<h3>Your wishlist is empty</h3><p>Tap the heart on any wig to save it here for later.</p><a class="btn btn-dark" href="shop.html">Browse wigs</a></div>`;
+LL.start(({ settings: S }) => {
+  const { $, $$, esc, icon, money, lenLabel, totals, store, cart, cartLines, api, user, truthy, imgTag, live, saveCart } = LL;
+  const promo = store.get('ll_promo', null);
+  const form = $('#payForm');
+
+  if (!cartLines().length) {
+    form.innerHTML = `<div class="panel empty span-all" style="grid-column:1/-1">${icon('bag')}<h3>Your cart is empty</h3><p>Add a wig to your cart before checking out.</p><a class="btn btn-dark" href="shop.html">Shop Wigs</a></div>`;
+    return;
   }
-  $('#wlNote').hidden = !!user();
-  $('#addAll').onclick = () => {
-    wish().forEach(id => { const p = products.find(x => x.id === id); if (p && p.stock !== 0) addToCart(id, {}, 1, true); });
-    toast('Your saved wigs are in the cart.<a href="cart.html">View cart</a>');
-  };
-  document.addEventListener('wishchange', draw);
-  draw();
+
+  // Prefill from account
+  const u = user();
+  if (u) {
+    $('#signinNote').hidden = true;
+    ['first_name', 'last_name', 'email', 'phone'].forEach(k => { if (u[k]) form.elements[k].value = u[k]; });
+  }
+
+  let ship = 'standard';
+  const methods = [
+    ['card', 'Pay with card', 'Debit/credit card, bank or USSD through Paystack', 'card', S.pay_card_enabled],
+    ['bank', 'Bank transfer', 'Pay straight into our bank account', 'bank', S.pay_bank_enabled],
+    ['cod', 'Pay on delivery', 'Pay when your wig arrives', 'cash', S.pay_cod_enabled]
+  ].filter(m => truthy(m[4]));
+  let pay = methods[0] ? methods[0][0] : 'bank';
+
+  function shipOpts() {
+    const std = totals(promo, 'standard').ship;
+    const opts = [['standard', 'Standard delivery', S.standard_eta, std, 'truck']];
+    if (+S.express_fee > 0) opts.push(['express', 'Express delivery', S.express_eta, +S.express_fee, 'bolt']);
+    $('#shipOpts').innerHTML = opts.map(o => `<label class="choice ${ship === o[0] ? 'on' : ''}"><input type="radio" name="ship" value="${o[0]}" ${ship === o[0] ? 'checked' : ''}>${icon(o[4])}<span><b>${o[1]}</b><small>${esc(o[2] || '')}</small></span><span class="end">${o[3] ? money(o[3]) : 'Free'}</span></label>`).join('');
+  }
+  function payOpts() {
+    $('#payOpts').innerHTML = methods.map(m => `<label class="choice ${pay === m[0] ? 'on' : ''}"><input type="radio" name="pay" value="${m[0]}" ${pay === m[0] ? 'checked' : ''}>${icon(m[3])}<span><b>${m[1]}</b><small>${m[2]}</small></span></label>`).join('')
+      || '<p class="mini-note">No payment method is switched on yet. Turn one on in the Settings tab of the Google Sheet.</p>';
+    const note = pay === 'bank' ? 'After you place your order, transfer the total to:\n\n' + S.bank_details + '\n\nUse your order number as the payment reference.'
+      : pay === 'cod' ? S.cod_note : '';
+    $('#payNote').hidden = !note; $('#payNote').textContent = note;
+  }
+  function summary() {
+    const t = totals(promo, ship);
+    $('#miniLines').innerHTML = t.lines.map(l => `<div class="mini-line"><span class="thumb">${imgTag(l.p.images[0], l.p.name, '')}</span>
+      <span><b>${esc(l.p.name)}</b><small>${[l.color, lenLabel(l.length), l.cap].filter(Boolean).map(esc).join(' · ')}${l.qty > 1 ? ' · Qty ' + l.qty : ''}</small></span><span>${money(l.unit * l.qty)}</span></div>`).join('');
+    $('#sSub').textContent = money(t.sub);
+    $('#sShip').textContent = t.ship ? money(t.ship) : 'Free';
+    $('#sDisc').textContent = '– ' + money(t.disc);
+    $('#sCode').textContent = promo ? `(${promo.code})` : '';
+    $('#sTotal').textContent = money(t.total);
+    $('#payBtn').innerHTML = (pay === 'card' ? `PAY ${money(t.total)}` : 'PLACE ORDER') + icon('arrow');
+  }
+  form.addEventListener('change', e => {
+    if (e.target.name === 'ship') { ship = e.target.value; shipOpts(); }
+    if (e.target.name === 'pay') { pay = e.target.value; payOpts(); }
+    summary();
+  });
+  shipOpts(); payOpts(); summary();
+
+  /* ---------- Place order ---------- */
+  const btn = $('#payBtn'), msg = $('#payMsg');
+  let pending = null; // order saved but card payment not finished
+  const busy = on => { btn.disabled = on; if (on) btn.textContent = 'PROCESSING...'; else summary(); };
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault(); msg.textContent = '';
+    for (const el of form.querySelectorAll('[required]')) if (!el.checkValidity()) { el.reportValidity(); return; }
+    if (!methods.length) { msg.textContent = 'Payments are not set up yet.'; return; }
+    const f = Object.fromEntries(new FormData(form));
+    const customer = { first_name: f.first_name, last_name: f.last_name, email: f.email, phone: f.phone, address: f.address, city: f.city, state: f.state, country: f.country, postal: f.postal, note: f.note };
+    busy(true);
+    let res = pending && pay === 'card' ? pending : null;
+    if (!res) {
+      res = await api('order', {
+        token: u ? u.token : '', customer, promo: promo ? promo.code : '', shipping_method: ship, payment_method: pay,
+        items: cart().map(({ id, qty, color, length, cap }) => ({ id, qty, color, length, cap }))
+      });
+    }
+    if (!res.ok) { busy(false); msg.textContent = res.error || 'We could not place your order. Please try again.'; return; }
+    if (pay !== 'card') return finish(res, customer, false);
+    if (!live()) return finish(res, customer, true, 'Preview mode: no real payment was taken.');
+    if (!S.paystack_public_key) return finish(res, customer, false, "Card payment isn't switched on yet, so we've saved your order and will contact you to complete payment.");
+    payCard(res, customer);
+  });
+
+  function loadPaystack() {
+    return new Promise((ok, bad) => {
+      if (window.PaystackPop) return ok();
+      const s = document.createElement('script'); s.src = 'https://js.paystack.co/v1/inline.js';
+      s.onload = ok; s.onerror = () => bad(new Error('Paystack did not load'));
+      document.head.appendChild(s);
+    });
+  }
+  async function payCard(res, customer) {
+    try { await loadPaystack(); }
+    catch (e) { pending = res; busy(false); msg.textContent = 'Could not open the payment window. Check your connection and try again.'; return; }
+    const handler = PaystackPop.setup({
+      key: S.paystack_public_key,
+      email: customer.email,
+      amount: Math.round(res.total * 100),
+      currency: res.currency || S.currency_code || 'NGN',
+      ref: res.orderId + '-' + Date.now().toString(36),
+      metadata: { order_id: res.orderId, custom_fields: [{ display_name: 'Order', variable_name: 'order_id', value: res.orderId }] },
+      callback: function (r) {
+        btn.textContent = 'CONFIRMING PAYMENT...';
+        api('verify', { orderId: res.orderId, reference: r.reference }).then(v => finish(res, customer, !!(v && v.paid),
+          v && v.paid ? '' : "We're still confirming your payment. You'll get an email as soon as it clears."));
+      },
+      onClose: function () {
+        pending = res; busy(false);
+        msg.textContent = `Payment window closed. Your order ${res.orderId} is saved, so you can try paying again.`;
+      }
+    });
+    handler.openIframe();
+  }
+
+  function finish(res, customer, paid, note) {
+    saveCart([]); store.del('ll_promo');
+    form.hidden = true; $('#payHead').hidden = true;
+    $('#st2').className = 'done'; $('#st3').className = 'cur';
+    const total = money(res.total);
+    let body = '';
+    if (paid) body = `<p>Payment received. A receipt is on its way to <b>${esc(customer.email)}</b>.</p>`;
+    else if (pay === 'bank') body = `<p>Please transfer <b>${total}</b> to the account below. Use <b>${esc(res.orderId)}</b> as your payment reference.</p><div class="pay-note">${esc(S.bank_details)}</div><p>We'll start packing your order as soon as the money lands.</p>`;
+    else if (pay === 'cod') body = `<p>${esc(S.cod_note)}</p><p>Amount to pay on delivery: <b>${total}</b></p>`;
+    if (note) body += `<p class="mini-note" style="margin-top:12px">${esc(note)}</p>`;
+    $('#doneBox').innerHTML = `<div class="big-check">${icon('check')}</div>
+      <h2>Thank you, ${esc(customer.first_name)}!</h2>
+      <p>Your order <b>${esc(res.orderId)}</b> has been received.</p>${body}
+      <div class="done-actions"><a class="btn btn-dark" href="shop.html">CONTINUE SHOPPING</a>${u ? '<a class="btn btn-outline" href="signup.html#orders">VIEW MY ORDERS</a>' : ''}</div>`;
+    $('#doneBox').hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 });
 </script>
 </body>
