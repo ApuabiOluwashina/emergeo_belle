@@ -1,4 +1,4 @@
-LUXELOCKS WEBSITE: SETUP GUIDE
+Emergeo Belle WEBSITE: SETUP GUIDE
 ==============================
 
 What's in this folder
@@ -18,12 +18,12 @@ Open index.html in a browser right now and the whole site works with sample cont
 
 Step 1: Create the Google Sheet
 -------------------------------
-1. Create a new blank Google Sheet and name it "LuxeLocks Website".
+1. Create a new blank Google Sheet and name it "Emergeo Belle Website".
 2. Click Extensions > Apps Script.
 3. Delete what's in Code.gs, then paste in everything from the Code.gs file in this folder. Save.
 4. In the function dropdown at the top, choose "setup" and click Run.
 5. Google will ask for permission. Click Review permissions, pick your account, then Advanced > Go to project > Allow.
-6. Go back to the Sheet. You'll now have 10 tabs filled with sample content, and a "LuxeLocks" menu at the top.
+6. Go back to the Sheet. You'll now have 10 tabs filled with sample content, and a "Emergeo Belle" menu at the top.
 
 
 Step 2: Publish the script
@@ -73,7 +73,7 @@ Orders       Every order with items, totals, payment method and status. Update o
 Newsletter   Emails from the "Join now" offer box and from sign-ups that ticked the newsletter box.
 
 The website keeps a copy of the Sheet for up to 5 minutes so it loads fast. To see changes straight away,
-use LuxeLocks > Refresh website now in the Sheet, then reload the page with ?refresh=1 at the end of the address
+use Emergeo Belle > Refresh website now in the Sheet, then reload the page with ?refresh=1 at the end of the address
 (for example index.html?refresh=1).
 
 
@@ -116,7 +116,7 @@ active          FALSE hides the wig from the site.
 stock           0 shows "Sold out". 1 to 5 shows "Only X left". Blank means not tracked.
 sort            Lower numbers show first.
 
-Room for 360 wigs: in the Sheet, click LuxeLocks > Add product slots (up to 360). It adds empty rows with
+Room for 360 wigs: in the Sheet, click Emergeo Belle > Add product slots (up to 360). It adds empty rows with
 IDs already filled in (LL012, LL013 ... LL360). A row only appears on the site once it has a name and price,
 so you can fill them in at your own pace. The shop shows 24 wigs per page with page numbers at the bottom.
 Change products_per_page in Settings if you want more or fewer per page.
